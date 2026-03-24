@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Interview</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --card: #16213e;
+    --accent: #6c63ff;
+    --accent-hover: #5a52d5;
+    --accent-light: rgba(108, 99, 255, 0.15);
+    --text: #e8e8e8;
+    --text-dim: #8892a4;
+    --success: #4ade80;
+    --success-light: rgba(74, 222, 128, 0.15);
+    --border: #2a2a4a;
+    --input-bg: #0f1629;
+    --warn: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; max-width: 480px; margin: 0 auto;
+    overflow-x: hidden;
+    /* Telegram Mini App theme integration */
+    background: var(--tg-theme-bg-color, var(--bg));
+    color: var(--tg-theme-text-color, var(--text));
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--card); padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .header h1 { font-size: 17px; font-weight: 600; }
+  .badge {
+    background: var(--accent-light); color: var(--accent);
+    font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600;
+  }
+  .badge.multi {
+    background: var(--success-light); color: var(--success);
+  }
+  .progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+
+  /* ── Question ── */
+  .question-container { padding: 20px; min-height: calc(100vh - 140px); }
+  .question-number { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .question-text { font-size: 20px; font-weight: 600; line-height: 1.4; margin-bottom: 24px; }
+  .multi-hint { font-size: 12px; color: var(--warn); margin-bottom: 12px; }
+
+  /* ── Options ── */
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    background: var(--card); border: 1.5px solid var(--border); color: var(--text);
+    padding: 14px 18px; border-radius: 14px; font-size: 15px; text-align: left;
+    cursor: pointer; transition: all 0.15s ease;
+    display: flex; align-items: center; gap: 12px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .option-btn:active { transform: scale(0.97); }
+  .option-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  .option-btn.selected { border-color: var(--accent); background: var(--accent-light); }
+  .option-btn .dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .option-btn.multi-mode .dot { border-radius: 4px; }
+  .option-btn.selected .dot { border-color: var(--accent); background: var(--accent); }
+  .option-btn.selected .dot::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
+
+  /* ── Free text ── */
+  .free-text-toggle {
+    margin-top: 16px; padding: 12px 18px; background: transparent;
+    border: 1.5px dashed var(--border); border-radius: 14px;
+    color: var(--text-dim); font-size: 14px; cursor: pointer; width: 100%;
+    text-align: left; transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .free-text-toggle:hover { border-color: var(--accent); color: var(--text); }
+  .free-text-area { display: none; margin-top: 12px; }
+  .free-text-area.visible { display: block; }
+  .free-text-area textarea {
+    width: 100%; min-height: 80px; padding: 14px; border-radius: 14px;
+    border: 1.5px solid var(--border); background: var(--input-bg);
+    color: var(--text); font-size: 15px; font-family: inherit;
+    resize: vertical; outline: none; transition: border-color 0.15s ease;
+  }
+  .free-text-area textarea:focus { border-color: var(--accent); }
+  .free-text-area textarea::placeholder { color: var(--text-dim); }
+
+  /* ── Answered pills ── */
+  .answered-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+  .answered-pill {
+    background: var(--accent-light); color: var(--accent);
+    font-size: 11px; padding: 4px 10px; border-radius: 8px;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .answered-pill:hover { background: var(--accent); color: white; }
+  .answered-pill.empty { background: var(--border); color: var(--text-dim); }
+
+  /* ── Nav ── */
+  .nav-bar {
+    position: sticky; bottom: 0; background: var(--card);
+    border-top: 1px solid var(--border); padding: 12px 20px;
+    display: flex; gap: 10px; z-index: 10;
+  }
+  .nav-btn {
+    flex: 1; padding: 14px; border-radius: 12px; font-size: 15px;
+    font-weight: 600; cursor: pointer; border: none;
+    transition: all 0.15s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn:active { transform: scale(0.97); }
+  .nav-btn.secondary { background: var(--border); color: var(--text-dim); }
+  .nav-btn.primary { background: var(--accent); color: white; }
+  .nav-btn.primary:hover { background: var(--accent-hover); }
+  .nav-btn.submit { background: var(--success); color: #1a1a2e; }
+  .nav-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+  /* ── Results ── */
+  .results { padding: 20px; display: none; }
+  .results.visible { display: block; }
+  .results h2 { font-size: 22px; margin-bottom: 4px; }
+  .results .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+  .result-item {
+    background: var(--card); border-radius: 14px; padding: 14px 18px;
+    margin-bottom: 10px; border: 1px solid var(--border);
+  }
+  .result-item .r-question { font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+  .result-item .r-answer { font-size: 15px; font-weight: 500; }
+  .result-item .r-answer.pending { color: var(--warn); font-style: italic; }
+
+  /* ── Loading ── */
+  .loading { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+  .loading-text { color: var(--text-dim); font-size: 16px; }
+
+  /* ── Error ── */
+  .error { padding: 40px 20px; text-align: center; }
+  .error h2 { color: #ef4444; margin-bottom: 8px; }
+  .error p { color: var(--text-dim); font-size: 14px; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-in { animation: slideIn 0.25s ease; }
+</style>
+</head>
+<body>
+
+<div id="loadingView" class="loading"><span class="loading-text">Lädt...</span></div>
+
+<div id="errorView" class="error" style="display:none">
+  <h2>⚠️ Fehler</h2>
+  <p id="errorMsg">Keine Fragen gefunden.</p>
+</div>
+
+<div id="mainView" style="display:none">
+  <div class="header">
+    <div class="header-top">
+      <h1 id="title">🎙️ Interview</h1>
+      <span class="badge" id="counter">1 / 6</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+  </div>
+
+  <div class="question-container" id="questionView">
+    <div class="answered-summary" id="answeredPills"></div>
+    <div class="question-number" id="qLabel"></div>
+    <div class="question-text animate-in" id="qText"></div>
+    <div class="multi-hint" id="multiHint" style="display:none">↕ Mehrere Antworten möglich</div>
+    <div class="options" id="optionsBox"></div>
+    <button class="free-text-toggle" id="freeToggle" onclick="toggleFreeText()">✏️ Eigene Antwort eingeben...</button>
+    <div class="free-text-area" id="freeArea">
+      <textarea id="freeInput" placeholder="Deine Antwort..."></textarea>
+    </div>
+  </div>
+
+  <div class="results" id="resultsView">
+    <h2>✅ Fertig!</h2>
+    <p class="subtitle" id="resultSubtitle">Deine Antworten werden verarbeitet...</p>
+    <div id="resultsList"></div>
+  </div>
+
+  <div class="nav-bar" id="navBar">
+    <button class="nav-btn secondary" id="backBtn" onclick="goBack()" style="display:none">← Zurück</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="goNext()">Weiter →</button>
+  </div>
+</div>
+
+<script>
+// ── Telegram WebApp SDK ──
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) tg.ready();
+
+// ── Parse questions from URL fragment ──
+let QUESTIONS = [];
+let TITLE = '🎙️ Interview';
+
+function init() {
+  try {
+    const fragment = window.location.hash.slice(1);
+    if (!fragment) throw new Error('No data');
+    const decoded = JSON.parse(decodeURIComponent(atob(fragment)));
+    QUESTIONS = decoded.questions || decoded;
+    TITLE = decoded.title || TITLE;
+    if (!Array.isArray(QUESTIONS) || QUESTIONS.length === 0) throw new Error('Empty');
+  } catch (e) {
+    // Fallback: try query param
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) {
+        const decoded = JSON.parse(decodeURIComponent(atob(q)));
+        QUESTIONS = decoded.questions || decoded;
+        TITLE = decoded.title || TITLE;
+      }
+    } catch (e2) {}
+  }
+
+  if (QUESTIONS.length === 0) {
+    document.getElementById('loadingView').style.display = 'none';
+    document.getElementById('errorView').style.display = 'block';
+    return;
+  }
+
+  // Normalize questions
+  QUESTIONS = QUESTIONS.map(q => ({
+    q: q.q || q.question || '',
+    options: (q.options || []).map(o => typeof o === 'string' ? o : (o.label || o.text || '')),
+    multi: q.multi || q.multiselect || false
+  }));
+
+  document.getElementById('title').textContent = TITLE;
+  document.getElementById('loadingView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'block';
+
+  answers = new Array(QUESTIONS.length).fill(null);
+  render();
+}
+
+// ── State ──
+let current = 0;
+let answers = [];
+
+function render() {
+  const q = QUESTIONS[current];
+  const total = QUESTIONS.length;
+
+  document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+  document.getElementById('counter').className = q.multi ? 'badge multi' : 'badge';
+  document.getElementById('progress').style.width = `${((current + 1) / total) * 100}%`;
+  document.getElementById('qLabel').textContent = `FRAGE ${current + 1}`;
+  document.getElementById('multiHint').style.display = q.multi ? 'block' : 'none';
+
+  const qText = document.getElementById('qText');
+  qText.textContent = q.q;
+  qText.className = 'question-text animate-in';
+
+  // Options
+  const box = document.getElementById('optionsBox');
+  box.innerHTML = '';
+  const currentAnswer = answers[current];
+
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    let isSelected = false;
+    if (q.multi && Array.isArray(currentAnswer)) {
+      isSelected = currentAnswer.includes(opt);
+    } else {
+      isSelected = currentAnswer === opt;
+    }
+    btn.className = 'option-btn' + (isSelected ? ' selected' : '') + (q.multi ? ' multi-mode' : '');
+    btn.innerHTML = `<span class="dot"></span>${opt}`;
+    btn.onclick = () => selectOption(opt);
+    box.appendChild(btn);
+  });
+
+  // Free text
+  const freeArea = document.getElementById('freeArea');
+  const freeInput = document.getElementById('freeInput');
+  const isFreeText = currentAnswer && (
+    (typeof currentAnswer === 'string' && !q.options.includes(currentAnswer)) ||
+    (Array.isArray(currentAnswer) && currentAnswer.some(a => !q.options.includes(a)))
+  );
+  if (isFreeText) {
+    freeArea.classList.add('visible');
+    const freeVal = Array.isArray(currentAnswer)
+      ? currentAnswer.filter(a => !q.options.includes(a)).join(', ')
+      : currentAnswer;
+    freeInput.value = freeVal;
+  } else {
+    freeArea.classList.remove('visible');
+    freeInput.value = '';
+  }
+
+  // Answered pills
+  const pills = document.getElementById('answeredPills');
+  pills.innerHTML = '';
+  answers.forEach((a, i) => {
+    if (i === current) return;
+    const pill = document.createElement('span');
+    const display = a === null ? `Q${i+1}` : formatAnswer(a);
+    pill.className = 'answered-pill' + (a === null ? ' empty' : '');
+    pill.textContent = `Q${i+1}: ${display.length > 18 ? display.slice(0,16) + '…' : display}`;
+    pill.onclick = () => { current = i; render(); };
+    pills.appendChild(pill);
+  });
+
+  // Nav
+  document.getElementById('backBtn').style.display = current > 0 ? 'block' : 'none';
+  const nextBtn = document.getElementById('nextBtn');
+  if (current === total - 1) {
+    nextBtn.textContent = '✅ Abschicken';
+    nextBtn.className = 'nav-btn submit';
+  } else {
+    nextBtn.textContent = 'Weiter →';
+    nextBtn.className = 'nav-btn primary';
+  }
+}
+
+function formatAnswer(a) {
+  if (Array.isArray(a)) return a.join(', ');
+  return a || '';
+}
+
+function selectOption(opt) {
+  const q = QUESTIONS[current];
+
+  if (q.multi) {
+    // Toggle multiselect
+    if (!Array.isArray(answers[current])) answers[current] = [];
+    const idx = answers[current].indexOf(opt);
+    if (idx >= 0) {
+      answers[current].splice(idx, 1);
+      if (answers[current].length === 0) answers[current] = null;
+    } else {
+      answers[current].push(opt);
+    }
+    render();
+  } else {
+    // Single select — auto advance
+    answers[current] = opt;
+    render();
+    setTimeout(() => {
+      if (current < QUESTIONS.length - 1) {
+        current++;
+        render();
+      }
+    }, 250);
+  }
+}
+
+function toggleFreeText() {
+  const area = document.getElementById('freeArea');
+  area.classList.toggle('visible');
+  if (area.classList.contains('visible')) {
+    document.getElementById('freeInput').focus();
+  }
+}
+
+function goBack() {
+  if (current > 0) { current--; render(); }
+}
+
+function goNext() {
+  // Save free text if open
+  const freeArea = document.getElementById('freeArea');
+  const freeInput = document.getElementById('freeInput');
+  if (freeArea.classList.contains('visible') && freeInput.value.trim()) {
+    const q = QUESTIONS[current];
+    if (q.multi) {
+      if (!Array.isArray(answers[current])) answers[current] = [];
+      answers[current].push(freeInput.value.trim());
+    } else {
+      answers[current] = freeInput.value.trim();
+    }
+  }
+
+  if (current < QUESTIONS.length - 1) {
+    current++;
+    render();
+  } else {
+    submitResults();
+  }
+}
+
+function submitResults() {
+  // Build results
+  const results = QUESTIONS.map((q, i) => ({
+    q: q.q,
+    a: answers[i] !== null ? (Array.isArray(answers[i]) ? answers[i] : answers[i]) : null,
+    multi: q.multi || false
+  }));
+
+  // Show results screen
+  document.getElementById('questionView').style.display = 'none';
+  const resultsView = document.getElementById('resultsView');
+  resultsView.classList.add('visible');
+
+  const list = document.getElementById('resultsList');
+  list.innerHTML = '';
+  results.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    const display = r.a !== null ? formatAnswer(r.a) : 'Keine Antwort';
+    const cls = r.a !== null ? '' : 'pending';
+    item.innerHTML = `<div class="r-question">${r.q}</div><div class="r-answer ${cls}">${display}</div>`;
+    list.appendChild(item);
+  });
+
+  // Send to Telegram
+  if (tg) {
+    try {
+      tg.sendData(JSON.stringify(results));
+    } catch (e) {
+      document.getElementById('resultSubtitle').textContent = '✅ Gespeichert! Du kannst die App schliessen.';
+    }
+  } else {
+    // Fallback for browser testing
+    document.getElementById('resultSubtitle').textContent = '(Browser-Modus — Daten in Konsole)';
+    console.log('Interview Results:', JSON.stringify(results, null, 2));
+  }
+
+  // Hide nav
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.textContent = '✅ Fertig';
+  nextBtn.disabled = true;
+  document.getElementById('backBtn').style.display = 'none';
+}
+
+// ── Go ──
+init();
+</script>
+</body>
+</html>
