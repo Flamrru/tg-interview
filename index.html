@@ -202,20 +202,23 @@
 const tg = window.Telegram && window.Telegram.WebApp;
 if (tg) tg.ready();
 
-// ── Parse questions from URL fragment ──
+// ── Parse questions from URL fragment, query param, Telegram startapp, or remote URL ──
 let QUESTIONS = [];
 let TITLE = '🎙️ Interview';
 
-function init() {
+async function init() {
+  // Method 1: URL fragment (#base64)
   try {
     const fragment = window.location.hash.slice(1);
-    if (!fragment) throw new Error('No data');
-    const decoded = JSON.parse(decodeURIComponent(atob(fragment)));
-    QUESTIONS = decoded.questions || decoded;
-    TITLE = decoded.title || TITLE;
-    if (!Array.isArray(QUESTIONS) || QUESTIONS.length === 0) throw new Error('Empty');
-  } catch (e) {
-    // Fallback: try query param
+    if (fragment && fragment.length > 10) {
+      const decoded = JSON.parse(decodeURIComponent(atob(fragment)));
+      QUESTIONS = decoded.questions || decoded;
+      TITLE = decoded.title || TITLE;
+    }
+  } catch (e) {}
+
+  // Method 2: Query param (?q=base64)
+  if (QUESTIONS.length === 0) {
     try {
       const params = new URLSearchParams(window.location.search);
       const q = params.get('q');
@@ -224,7 +227,44 @@ function init() {
         QUESTIONS = decoded.questions || decoded;
         TITLE = decoded.title || TITLE;
       }
-    } catch (e2) {}
+    } catch (e) {}
+  }
+
+  // Method 3: Remote URL (?src=https://...)
+  if (QUESTIONS.length === 0) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const src = params.get('src');
+      if (src) {
+        const r = await fetch(src);
+        const data = await r.json();
+        QUESTIONS = data.questions || data;
+        TITLE = data.title || TITLE;
+      }
+    } catch (e) {}
+  }
+
+  // Method 4: Telegram startapp param (tgWebAppStartParam)
+  if (QUESTIONS.length === 0) {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      let startParam = params.get('tgWebAppStartParam');
+      if (!startParam && tg) startParam = tg.initDataUnsafe?.start_param;
+      if (startParam) {
+        // startapp can be: base64 data, or "src_GISTID" for remote fetch
+        if (startParam.startsWith('src_')) {
+          const gistId = startParam.slice(4);
+          const r = await fetch(`https://gist.githubusercontent.com/Flamrru/${gistId}/raw/`);
+          const data = await r.json();
+          QUESTIONS = data.questions || data;
+          TITLE = data.title || TITLE;
+        } else {
+          const decoded = JSON.parse(decodeURIComponent(atob(startParam)));
+          QUESTIONS = decoded.questions || decoded;
+          TITLE = decoded.title || TITLE;
+        }
+      }
+    } catch (e) {}
   }
 
   if (QUESTIONS.length === 0) {
